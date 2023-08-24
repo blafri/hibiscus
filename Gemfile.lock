@@ -3,6 +3,7 @@ PATH
   specs:
     hibiscus (0.1.0)
       rails (>= 7.0.7.2)
+      warden (~> 1.2, >= 1.2.9)
 
 GEM
   remote: https://rubygems.org/
@@ -152,6 +153,8 @@ GEM
     timeout (0.4.0)
     tzinfo (2.0.6)
       concurrent-ruby (~> 1.0)
+    warden (1.2.9)
+      rack (>= 2.0.9)
     websocket-driver (0.7.6)
       websocket-extensions (>= 0.1.0)
     websocket-extensions (0.1.5)
