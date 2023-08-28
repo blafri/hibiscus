@@ -1,0 +1,22 @@
+require:
+  - rubocop-minitest
+AllCops:
+  Exclude:
+    - bin/**/*
+    - config/routes.rb
+    - lib/hibiscus/engine.rb
+    - lib/hibiscus/version.rb
+    - test/dummy/**/*
+    - test/test_helper.rb
+  NewCops: enable
+Metrics/ClassLength:
+  Exclude:
+    - test/**/*.rb
+Minitest/MultipleAssertions:
+  Enabled: false
+Style/FrozenStringLiteralComment:
+  Exclude:
+    - Gemfile
+    - Rakefile
+Style/StringLiterals:
+  EnforcedStyle: double_quotes

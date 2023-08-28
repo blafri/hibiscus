@@ -21,6 +21,8 @@ Gem::Specification.new do |spec|
     Dir["{app,config,db,lib}/**/*", "MIT-LICENSE", "Rakefile", "README.md"]
   end
 
-  spec.add_dependency "rails", ">= 7.0.7.2"
-  spec.add_dependency "warden", "~> 1.2", ">= 1.2.9"
+  spec.add_dependency "faraday", "~> 2.7"
+  spec.add_dependency "jwt", "2.7"
+  spec.add_dependency "rails", "~> 7.0.0"
+  spec.add_dependency "warden", "~> 1.2"
 end
