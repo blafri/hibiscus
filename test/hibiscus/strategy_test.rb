@@ -17,8 +17,10 @@ module Hibiscus
     private_constant :User
 
     class Strategy < Hibiscus::Strategy
-      self.openid_config = Hibiscus::Config.new(client_id: "id", client_secret: "secret", metadata_url: METADATA_URL,
-                                                user_finder: ->(claims) { User.new("john") if claims[:name] == "john" })
+      self.client_id = "id"
+      self.client_secret = "secret"
+      self.user_finder = ->(claims) { User.new("john") if ["john"].include?(claims[:name]) }
+      self.metadata = Metadata.new(METADATA_URL)
     end
     private_constant :Strategy
 
@@ -192,7 +194,7 @@ module Hibiscus
                   nbf: (time - 300),
                   iat: (time - 300),
                   iss: "hibiscus-test",
-                  aud: Strategy.openid_config.client_id,
+                  aud: Strategy.client_id,
                   name: }
 
       JWT.encode(payload, jwk.keypair, "RS256", headers)

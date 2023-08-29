@@ -3,12 +3,14 @@
 module Hibiscus
   # @api private
   class Metadata
-    attr_reader :config, :cache, :cache_key
+    attr_reader :cache_key, :metadata_url
 
-    def initialize(config, cache)
-      @config = config
-      @cache = cache
-      @cache_key = "hibiscus/metadata/#{Digest::MD5.hexdigest(config.metadata_url)}"
+    def initialize(metadata_url)
+      @metadata_url = metadata_url.dup.to_s.freeze
+      @cache = Rails.cache
+      @cache_key = "hibiscus/metadata/#{Digest::MD5.hexdigest(metadata_url)}".freeze
+
+      freeze
     end
 
     def to_h
@@ -27,12 +29,12 @@ module Hibiscus
 
     private
 
-    def config_document
-      cache.fetch(cache_key, expires_in: 1.day, race_condition_ttl: 10.seconds) { fetch_metadata }
-    end
+    attr_reader :cache
 
-    def fetch_metadata
-      client.get(config.metadata_url).body
+    def config_document
+      cache.fetch(cache_key) do
+        client.get(metadata_url).body
+      end
     rescue Faraday::Error => e
       raise MetadataFetchError, e
     end

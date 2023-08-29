@@ -57,7 +57,9 @@ module Hibiscus
     private
 
     def subject
-      JWKS.new(TEST_URL, @cache)
+      Rails.stub(:cache, @cache) do
+        JWKS.new(TEST_URL)
+      end
     end
 
     def response

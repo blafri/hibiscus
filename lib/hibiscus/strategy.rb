@@ -4,23 +4,24 @@ module Hibiscus
   # A warden strategy to authenicate the user via openid.
   # @api private
   class Strategy < Warden::Strategies::Base
-    attr_reader :cache, :metadata, :openid_config, :logger
+    attr_reader :client_id, :client_secret, :user_finder, :metadata, :logger
 
     class << self
-      attr_reader :openid_config
+      attr_reader :client_id, :client_secret, :user_finder, :metadata
 
       private
 
-      attr_writer :openid_config
+      attr_writer :client_id, :client_secret, :user_finder, :metadata
     end
 
     def initialize(...)
       super
 
-      @cache = Rails.cache
+      @client_id = self.class.client_id
+      @client_secret = self.class.client_secret
+      @user_finder = self.class.user_finder
+      @metadata = self.class.metadata
       @logger = Rails.logger
-      @openid_config = self.class.openid_config
-      @metadata = Metadata.new(openid_config, cache)
     end
 
     def valid?
@@ -43,16 +44,16 @@ module Hibiscus
 
     def validate_user
       fetch_token.then { |token| validate_token(token).first.transform_keys(&:to_sym) }
-                 .then(&openid_config.user_finder)
+                 .then(&user_finder)
     end
 
     def fetch_token
       token_fetch_params = {
-        client_id: openid_config.client_id,
+        client_id: client_id,
         code: params["code"],
         redirect_uri: request.url,
         grant_type: "authorization_code",
-        client_secret: openid_config.client_secret
+        client_secret: client_secret
       }
 
       client.post(metadata.token_endpoint, token_fetch_params).body[:id_token]
@@ -70,8 +71,8 @@ module Hibiscus
         verify_iss: true,
         iss: metadata.issuer,
         verify_aud: true,
-        aud: openid_config.client_id,
-        jwks: JWKS.new(metadata.jwks_uri, cache).to_h
+        aud: client_id,
+        jwks: JWKS.new(metadata.jwks_uri).to_h
       }
 
       JWT.decode(token, nil, true, decode_opts)

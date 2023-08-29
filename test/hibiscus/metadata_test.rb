@@ -65,8 +65,9 @@ module Hibiscus
     private
 
     def subject
-      config = Config.new(client_id: "id", client_secret: "secret", metadata_url: TEST_URL, user_finder: -> { "test" })
-      Metadata.new(config, @cache)
+      Rails.stub(:cache, @cache) do
+        Metadata.new(TEST_URL)
+      end
     end
 
     def response

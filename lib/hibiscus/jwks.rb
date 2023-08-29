@@ -3,25 +3,25 @@
 module Hibiscus
   # @api private
   class JWKS
-    attr_reader :src, :cache, :cache_key
+    attr_reader :src, :cache_key
 
-    def initialize(src, cache)
+    def initialize(src)
       @src = src
-      @cache = cache
+      @cache = Rails.cache
       @cache_key = "hibiscus/jwks/#{Digest::MD5.hexdigest(src)}"
     end
 
     def to_h
-      cache.fetch(cache_key, expires_in: 1.day, race_condition_ttl: 10.seconds) { fetch_jwks }
+      cache.fetch(cache_key, expires_in: 1.day, race_condition_ttl: 10.seconds) do
+        client.get(src).body
+      end
+    rescue Faraday::Error => e
+      raise JWKSFetchError, e
     end
 
     private
 
-    def fetch_jwks
-      client.get(src).body
-    rescue Faraday::Error => e
-      raise JWKSFetchError, e
-    end
+    attr_reader :cache
 
     def client
       Faraday.new(request: { timeout: 5 }) do |f|

@@ -7,7 +7,6 @@ require "net/http"
 require "uri"
 require "warden"
 
-require "hibiscus/config"
 require "hibiscus/engine"
 require "hibiscus/errors"
 require "hibiscus/jwks"
@@ -35,10 +34,11 @@ module Hibiscus
     def register_provider(identifier, client_id:, client_secret:, metadata_url:, &user_finder)
       raise ArgumentError, "You must supply a block" unless block_given?
 
-      openid_config = Config.new(client_id:, client_secret:, metadata_url:, user_finder:)
-
-      strategy = Class.new(Strategy) do
-        self.openid_config = openid_config
+      strategy = Class.new(Hibiscus::Strategy) do
+        self.client_id = client_id.dup.to_s.freeze
+        self.client_secret = client_secret.dup.to_s.freeze
+        self.user_finder = user_finder.dup.freeze
+        self.metadata = Metadata.new(metadata_url)
       end
 
       Warden::Strategies.add(identifier.to_sym, strategy)
