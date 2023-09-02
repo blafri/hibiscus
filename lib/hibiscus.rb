@@ -1,15 +1,12 @@
 # frozen_string_literal: true
 
-require "digest"
 require "faraday"
 require "jwt"
-require "net/http"
-require "uri"
 require "warden"
 
+require "hibiscus/config"
 require "hibiscus/engine"
 require "hibiscus/errors"
-require "hibiscus/jwks"
 require "hibiscus/metadata"
 require "hibiscus/strategy"
 require "hibiscus/version"
@@ -31,17 +28,21 @@ module Hibiscus
     #   Hibiscus.register_provider(:test, **options) do |claims|
     #     User.find_by(email: claims[:email])
     #   end
+    #
+    # rubocop:disable Style/ClassVars
     def register_provider(identifier, client_id:, client_secret:, metadata_url:, &user_finder)
       raise ArgumentError, "You must supply a block" unless block_given?
 
       strategy = Class.new(Hibiscus::Strategy) do
-        self.client_id = client_id.dup.to_s.freeze
-        self.client_secret = client_secret.dup.to_s.freeze
-        self.user_finder = user_finder.dup.freeze
-        self.metadata = Metadata.new(metadata_url)
+        @@config = Hibiscus::Config.new(client_id:, client_secret:, metadata_url:, user_finder:)
+
+        def config
+          @@config
+        end
       end
 
       Warden::Strategies.add(identifier.to_sym, strategy)
     end
+    # rubocop:enable Style/ClassVars
   end
 end

@@ -4,26 +4,6 @@ module Hibiscus
   # A warden strategy to authenicate the user via openid.
   # @api private
   class Strategy < Warden::Strategies::Base
-    attr_reader :client_id, :client_secret, :user_finder, :metadata, :logger
-
-    class << self
-      attr_reader :client_id, :client_secret, :user_finder, :metadata
-
-      private
-
-      attr_writer :client_id, :client_secret, :user_finder, :metadata
-    end
-
-    def initialize(...)
-      super
-
-      @client_id = self.class.client_id
-      @client_secret = self.class.client_secret
-      @user_finder = self.class.user_finder
-      @metadata = self.class.metadata
-      @logger = Rails.logger
-    end
-
     def valid?
       params.key?("code") || params.key?("error")
     end
@@ -44,19 +24,19 @@ module Hibiscus
 
     def validate_user
       fetch_token.then { |token| validate_token(token).first.transform_keys(&:to_sym) }
-                 .then(&user_finder)
+                 .then(&config.user_finder)
     end
 
     def fetch_token
       token_fetch_params = {
-        client_id: client_id,
+        client_id: config.client_id,
         code: params["code"],
         redirect_uri: request.url,
         grant_type: "authorization_code",
-        client_secret: client_secret
+        client_secret: config.client_secret
       }
 
-      client.post(metadata.token_endpoint, token_fetch_params).body[:id_token]
+      http_client.post(metadata.token_endpoint, token_fetch_params).body[:id_token]
     rescue Faraday::Error, MetadataFetchError => e
       authentication_error(e)
     end
@@ -71,8 +51,8 @@ module Hibiscus
         verify_iss: true,
         iss: metadata.issuer,
         verify_aud: true,
-        aud: client_id,
-        jwks: JWKS.new(metadata.jwks_uri).to_h
+        aud: config.client_id,
+        jwks: fetch_jwks(metadata.jwks_uri)
       }
 
       JWT.decode(token, nil, true, decode_opts)
@@ -80,6 +60,14 @@ module Hibiscus
       authentication_error(e)
     end
     # rubocop:enable Metrics/MethodLength
+
+    def fetch_jwks(src)
+      cache_key = "hibiscus/jwks/#{src}"
+
+      cache.fetch(cache_key, expires_in: 1.day, race_condition_ttl: 10.seconds) { http_client.get(src).body }
+    rescue Faraday::Error => e
+      raise JWKSFetchError, e
+    end
 
     # rubocop:disable Metrics/MethodLength
     def authentication_error(error)
@@ -98,7 +86,23 @@ module Hibiscus
     end
     # rubocop:enable Metrics/MethodLength
 
-    def client
+    def metadata
+      @metadata ||= Metadata.new(config.metadata_url)
+    end
+
+    def config
+      raise StandardError, "You must override the config method in your subclass"
+    end
+
+    def logger
+      Rails.logger
+    end
+
+    def cache
+      Rails.cache
+    end
+
+    def http_client
       Faraday.new(request: { timeout: 5 }) do |f|
         f.request :url_encoded
         f.response :json, parser_options: { symbolize_names: true }

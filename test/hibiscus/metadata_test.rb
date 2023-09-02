@@ -23,10 +23,9 @@ module Hibiscus
 
     test "it caches the result" do
       stub_request(:get, TEST_URL).to_return(response)
-      test_subject = subject
 
-      assert_changes(-> { @cache.read(test_subject.cache_key) }, from: nil, to: RESPONSE_BODY) do
-        test_subject.to_h
+      assert_changes(-> { @cache.read(cache_key) }, from: nil, to: RESPONSE_BODY) do
+        subject
       end
     end
 
@@ -54,8 +53,7 @@ module Hibiscus
 
     test "when data is cached it does not fetch the document" do
       webmock_stub = stub_request(:get, TEST_URL).to_return(response)
-      test_subject = subject
-      @cache.write(test_subject.cache_key, RESPONSE_BODY)
+      @cache.write(cache_key, RESPONSE_BODY)
       result = subject.to_h
 
       assert_equal(RESPONSE_BODY, result)
@@ -68,6 +66,10 @@ module Hibiscus
       Rails.stub(:cache, @cache) do
         Metadata.new(TEST_URL)
       end
+    end
+
+    def cache_key
+      "hibiscus/metadata/#{TEST_URL}"
     end
 
     def response

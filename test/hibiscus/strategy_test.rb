@@ -17,10 +17,12 @@ module Hibiscus
     private_constant :User
 
     class Strategy < Hibiscus::Strategy
-      self.client_id = "id"
-      self.client_secret = "secret"
-      self.user_finder = ->(claims) { User.new("john") if ["john"].include?(claims[:name]) }
-      self.metadata = Metadata.new(METADATA_URL)
+      @@config = Hibiscus::Config.new(client_id: "id", client_secret: "secret", metadata_url: METADATA_URL,
+                                      user_finder: ->(claims) { User.new("john") if ["john"].include?(claims[:name]) })
+
+      def config
+        @@config
+      end
     end
     private_constant :Strategy
 
@@ -72,8 +74,11 @@ module Hibiscus
       stub_request(:get, METADATA_URL).to_return(status: 404)
       log = StringIO.new
       env = Rack::MockRequest.env_for(url(success: true))
-      subject = Rails.stub(:logger, Logger.new(log)) { Strategy.new(env) }
-      subject.authenticate!
+      subject = Strategy.new(env)
+
+      Rails.stub(:logger, Logger.new(log)) do
+        subject.authenticate!
+      end
 
       assert_not(subject.successful?)
       assert_predicate(subject, :halted?)
@@ -89,8 +94,11 @@ module Hibiscus
       stub_request(:post, TOKEN_ENDPOINT).to_return(status: 400)
       log = StringIO.new
       env = Rack::MockRequest.env_for(url(success: true))
-      subject = Rails.stub(:logger, Logger.new(log)) { Strategy.new(env) }
-      subject.authenticate!
+      subject = Strategy.new(env)
+
+      Rails.stub(:logger, Logger.new(log)) do
+        subject.authenticate!
+      end
 
       assert_not(subject.successful?)
       assert_predicate(subject, :halted?)
@@ -107,8 +115,11 @@ module Hibiscus
       stub_request(:get, JWKS_URL).to_timeout
       log = StringIO.new
       env = Rack::MockRequest.env_for(url(success: true))
-      subject = Rails.stub(:logger, Logger.new(log)) { Strategy.new(env) }
-      subject.authenticate!
+      subject = Strategy.new(env)
+
+      Rails.stub(:logger, Logger.new(log)) do
+        subject.authenticate!
+      end
 
       assert_not(subject.successful?)
       assert_predicate(subject, :halted?)
@@ -125,8 +136,11 @@ module Hibiscus
       stub_request(:get, JWKS_URL).to_return(jwks_response)
       log = StringIO.new
       env = Rack::MockRequest.env_for(url(success: true))
-      subject = Rails.stub(:logger, Logger.new(log)) { Strategy.new(env) }
-      subject.authenticate!
+      subject = Strategy.new(env)
+
+      Rails.stub(:logger, Logger.new(log)) do
+        subject.authenticate!
+      end
 
       assert_not(subject.successful?)
       assert_predicate(subject, :halted?)
@@ -194,7 +208,7 @@ module Hibiscus
                   nbf: (time - 300),
                   iat: (time - 300),
                   iss: "hibiscus-test",
-                  aud: Strategy.client_id,
+                  aud: "id",
                   name: }
 
       JWT.encode(payload, jwk.keypair, "RS256", headers)

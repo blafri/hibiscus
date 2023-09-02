@@ -3,43 +3,35 @@
 module Hibiscus
   # @api private
   class Metadata
-    attr_reader :cache_key, :metadata_url
-
     def initialize(metadata_url)
-      @metadata_url = metadata_url.dup.to_s.freeze
-      @cache = Rails.cache
-      @cache_key = "hibiscus/metadata/#{Digest::MD5.hexdigest(metadata_url)}".freeze
+      cache_key = "hibiscus/metadata/#{metadata_url}"
+      @metadata = Rails.cache
+                       .fetch(cache_key) { http_client.get(metadata_url).body }
+                       .dup
+                       .freeze
 
       freeze
+    rescue Faraday::Error => e
+      raise MetadataFetchError, e
     end
 
     def to_h
-      config_document
+      @metadata
     end
 
     def method_missing(name)
-      config_document.fetch(name) { super }
+      @metadata.fetch(name) { super }
     end
 
     def respond_to_missing?(name)
-      return true if config_document.include?(name)
+      return true if @metadata.include?(name)
 
       super
     end
 
     private
 
-    attr_reader :cache
-
-    def config_document
-      cache.fetch(cache_key) do
-        client.get(metadata_url).body
-      end
-    rescue Faraday::Error => e
-      raise MetadataFetchError, e
-    end
-
-    def client
+    def http_client
       Faraday.new(request: { timeout: 5 }) do |f|
         f.response :json, parser_options: { symbolize_names: true }
         f.response :raise_error
