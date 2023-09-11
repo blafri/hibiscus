@@ -1,6 +1,9 @@
 # frozen_string_literal: true
 
 module Hibiscus
-  MetadataFetchError = Class.new(StandardError)
-  JWKSFetchError = Class.new(StandardError)
+  Error = Class.new(StandardError)
+
+  MetadataFetchError = Class.new(Hibiscus::Error)
+  JWKSFetchError = Class.new(Hibiscus::Error)
+  InvalidStateError = Class.new(Hibiscus::Error)
 end

@@ -14,6 +14,10 @@ Metrics/ClassLength:
     - test/**/*.rb
 Minitest/MultipleAssertions:
   Enabled: false
+Style/Documentation:
+  Exclude:
+    - app/**/*.rb
+    - test/**/*.rb
 Style/FrozenStringLiteralComment:
   Exclude:
     - Gemfile

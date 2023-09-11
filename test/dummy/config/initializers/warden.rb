@@ -3,7 +3,7 @@
 Rails.application.config.middleware.use Warden::Manager do |config|
   config.failure_app = ->(_env) do
     Rails.logger.info("Warden failure application invoked")
-    [401, {}, [""]]
+    [401, { "Content-Type" => "text/plain" }, ["Unauthorized"]]
   end
 
   # set default scope

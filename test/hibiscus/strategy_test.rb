@@ -13,15 +13,16 @@ module Hibiscus
     TOKEN_ENDPOINT = "https://openid-provider.int/token"
     private_constant :TOKEN_ENDPOINT
 
-    User = Struct.new(:name)
-    private_constant :User
-
     class Strategy < Hibiscus::Strategy
-      @@config = Hibiscus::Config.new(client_id: "id", client_secret: "secret", metadata_url: METADATA_URL,
-                                      user_finder: ->(claims) { User.new("john") if ["john"].include?(claims[:name]) })
+      @provider_config = Hibiscus::Config.new(client_id: "id", client_secret: "secret", metadata_url: METADATA_URL,
+                                              user_finder: ->(claims) { "john" if ["john"].include?(claims[:name]) })
 
-      def config
-        @@config
+      class << self
+        attr_reader :provider_config
+      end
+
+      def provider_config
+        self.class.provider_config
       end
     end
     private_constant :Strategy
@@ -67,7 +68,7 @@ module Hibiscus
 
       assert_predicate(subject, :successful?)
       assert_predicate(subject, :halted?)
-      assert_instance_of(User, subject.user)
+      assert_equal("john", subject.user)
     end
 
     test "authentication is unsuccessful if the metadata document can not be fetched" do

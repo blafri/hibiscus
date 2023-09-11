@@ -24,19 +24,19 @@ module Hibiscus
 
     def validate_user
       fetch_token.then { |token| validate_token(token).first.transform_keys(&:to_sym) }
-                 .then(&config.user_finder)
+                 .then(&provider_config.user_finder)
     end
 
     def fetch_token
       token_fetch_params = {
-        client_id: config.client_id,
+        client_id: provider_config.client_id,
         code: params["code"],
         redirect_uri: request.url,
         grant_type: "authorization_code",
-        client_secret: config.client_secret
+        client_secret: provider_config.client_secret
       }
 
-      http_client.post(metadata.token_endpoint, token_fetch_params).body[:id_token]
+      http_client.post(metadata.token_endpoint, token_fetch_params).body.fetch(:id_token)
     rescue Faraday::Error, MetadataFetchError => e
       authentication_error(e)
     end
@@ -51,7 +51,7 @@ module Hibiscus
         verify_iss: true,
         iss: metadata.issuer,
         verify_aud: true,
-        aud: config.client_id,
+        aud: provider_config.client_id,
         jwks: fetch_jwks(metadata.jwks_uri)
       }
 
@@ -87,10 +87,10 @@ module Hibiscus
     # rubocop:enable Metrics/MethodLength
 
     def metadata
-      @metadata ||= Metadata.new(config.metadata_url)
+      @metadata ||= Metadata.new(provider_config.metadata_url)
     end
 
-    def config
+    def provider_config
       raise StandardError, "You must override the config method in your subclass"
     end
 

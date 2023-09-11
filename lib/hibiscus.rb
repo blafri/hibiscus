@@ -29,20 +29,24 @@ module Hibiscus
     #     User.find_by(email: claims[:email])
     #   end
     #
-    # rubocop:disable Style/ClassVars
+    # rubocop:disable Metrics/MethodLength
     def register_provider(identifier, client_id:, client_secret:, metadata_url:, &user_finder)
       raise ArgumentError, "You must supply a block" unless block_given?
 
       strategy = Class.new(Hibiscus::Strategy) do
-        @@config = Hibiscus::Config.new(client_id:, client_secret:, metadata_url:, user_finder:)
+        @provider_config = Hibiscus::Config.new(client_id:, client_secret:, metadata_url:, user_finder:)
 
-        def config
-          @@config
+        class << self
+          attr_reader :provider_config
+        end
+
+        def provider_config
+          self.class.provider_config
         end
       end
 
       Warden::Strategies.add(identifier.to_sym, strategy)
     end
-    # rubocop:enable Style/ClassVars
+    # rubocop:enable Metrics/MethodLength
   end
 end
