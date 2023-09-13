@@ -20,10 +20,6 @@ module Hibiscus
       class << self
         attr_reader :provider_config
       end
-
-      def provider_config
-        self.class.provider_config
-      end
     end
     private_constant :Strategy
 
@@ -190,7 +186,7 @@ module Hibiscus
       {
         status: 200,
         headers: { "Content-Type" => "application/json" },
-        body: { id_token: }.to_json
+        body: { id_token: id_token }.to_json
       }
     end
 
@@ -210,7 +206,7 @@ module Hibiscus
                   iat: (time - 300),
                   iss: "hibiscus-test",
                   aud: "id",
-                  name: }
+                  name: name }
 
       JWT.encode(payload, jwk.keypair, "RS256", headers)
     end

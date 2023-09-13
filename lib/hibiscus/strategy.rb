@@ -4,6 +4,14 @@ module Hibiscus
   # A warden strategy to authenicate the user via openid.
   # @api private
   class Strategy < Warden::Strategies::Base
+    attr_reader :provider_config
+
+    def initialize(...)
+      super
+
+      @provider_config = self.class.provider_config
+    end
+
     def valid?
       params.key?("code") || params.key?("error")
     end
@@ -88,10 +96,6 @@ module Hibiscus
 
     def metadata
       @metadata ||= Metadata.new(provider_config.metadata_url)
-    end
-
-    def provider_config
-      raise StandardError, "You must override the config method in your subclass"
     end
 
     def logger
