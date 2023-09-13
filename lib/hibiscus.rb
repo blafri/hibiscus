@@ -4,15 +4,19 @@ require "faraday"
 require "jwt"
 require "warden"
 
-require "hibiscus/config"
-require "hibiscus/engine"
-require "hibiscus/errors"
-require "hibiscus/metadata"
-require "hibiscus/strategy"
-require "hibiscus/version"
+require_relative "hibiscus/config"
+require_relative "hibiscus/engine"
+require_relative "hibiscus/metadata"
+require_relative "hibiscus/strategy"
+require_relative "hibiscus/version"
 
 # Easy openid authentication for your rails application.
 module Hibiscus
+  Error = Class.new(StandardError)
+  MetadataFetchError = Class.new(Hibiscus::Error)
+  JWKSFetchError = Class.new(Hibiscus::Error)
+  InvalidStateError = Class.new(Hibiscus::Error)
+
   class << self
     # Register an openid provider that will be used for authentication. The block you pass to this method will be used
     # to find the user. It will recieve the claims from the openid provider as an argument. You should return the user
@@ -34,7 +38,8 @@ module Hibiscus
       raise ArgumentError, "You must supply a block" unless block_given?
 
       strategy = Class.new(Hibiscus::Strategy) do
-        @provider_config = Hibiscus::Config.new(client_id:, client_secret:, metadata_url:, user_finder:)
+        @provider_config = Hibiscus::Config.new(client_id: client_id, client_secret: client_secret,
+                                                metadata_url: metadata_url, user_finder: user_finder)
 
         class << self
           attr_reader :provider_config

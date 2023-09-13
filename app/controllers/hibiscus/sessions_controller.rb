@@ -16,7 +16,7 @@ module Hibiscus
       provider = hibiscus_provider
       scope = warden_scope
 
-      warden.authenticate!(provider, scope:)
+      warden.authenticate!(provider, scope: scope)
 
       warden.session(scope)["provider"] = provider
       redirect_to(redirect_path)
@@ -26,7 +26,7 @@ module Hibiscus
       state = SecureRandom.alphanumeric
       redirect_url = authorization_url(state)
 
-      flash[:hibiscus] = { provider: hibiscus_provider, scope: warden_scope, redirect_to: redirect_path, state: }
+      flash[:hibiscus] = { provider: hibiscus_provider, scope: warden_scope, redirect_to: redirect_path, state: state }
       redirect_to(redirect_url, allow_other_host: true)
     end
 

@@ -5,7 +5,6 @@ git_source(:github) { |repo| "https://github.com/#{repo}.git" }
 gemspec
 
 gem "debug"
-gem "puma"
 gem "rubocop", require: false
 gem "rubocop-minitest", require: false
 gem "sprockets-rails"
