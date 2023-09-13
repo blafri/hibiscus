@@ -4,6 +4,12 @@ module Hibiscus
   # A warden strategy to authenicate the user via openid.
   # @api private
   class Strategy < Warden::Strategies::Base
+    def initialize(...)
+      super
+
+      @provider_config = self.class.provider_config
+    end
+
     def valid?
       params.key?("code") || params.key?("error")
     end
@@ -22,6 +28,8 @@ module Hibiscus
 
     private
 
+    attr_reader :provider_config
+
     def validate_user
       fetch_token.then { |token| validate_token(token).first.transform_keys(&:to_sym) }
                  .then(&provider_config.user_finder)
@@ -36,7 +44,7 @@ module Hibiscus
         client_secret: provider_config.client_secret
       }
 
-      http_client.post(metadata.token_endpoint, token_fetch_params).body.fetch(:id_token)
+      http_client.post(provider_config.token_endpoint, token_fetch_params).body.fetch(:id_token)
     rescue Faraday::Error, MetadataFetchError => e
       authentication_error(e)
     end
@@ -49,10 +57,10 @@ module Hibiscus
         verify_not_before: true,
         verify_iat: true,
         verify_iss: true,
-        iss: metadata.issuer,
+        iss: provider_config.issuer,
         verify_aud: true,
         aud: provider_config.client_id,
-        jwks: fetch_jwks(metadata.jwks_uri)
+        jwks: jwks
       }
 
       JWT.decode(token, nil, true, decode_opts)
@@ -61,7 +69,8 @@ module Hibiscus
     end
     # rubocop:enable Metrics/MethodLength
 
-    def fetch_jwks(src)
+    def jwks
+      src = provider_config.jwks_uri
       cache_key = "hibiscus/jwks/#{src}"
 
       cache.fetch(cache_key, expires_in: 1.day, race_condition_ttl: 10.seconds) { http_client.get(src).body }
@@ -85,14 +94,6 @@ module Hibiscus
       throw(:authentication_failure)
     end
     # rubocop:enable Metrics/MethodLength
-
-    def metadata
-      @metadata ||= Metadata.new(provider_config.metadata_url)
-    end
-
-    def provider_config
-      raise StandardError, "You must override the config method in your subclass"
-    end
 
     def logger
       Rails.logger

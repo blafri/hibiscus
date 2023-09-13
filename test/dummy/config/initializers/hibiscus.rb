@@ -3,7 +3,7 @@
 options = {
   client_id: "test-id",
   client_secret: "secret",
-  metadata_url: "https://openid-test.int/metadata"
+  metadata_url: "https://hibiscus-openid-test.int/metadata"
 }
 
 Hibiscus.register_provider(:openid_test, **options) do |claims|

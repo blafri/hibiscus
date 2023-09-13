@@ -4,9 +4,8 @@ require "faraday"
 require "jwt"
 require "warden"
 
-require_relative "hibiscus/config"
 require_relative "hibiscus/engine"
-require_relative "hibiscus/metadata"
+require_relative "hibiscus/provider_config"
 require_relative "hibiscus/strategy"
 require_relative "hibiscus/version"
 
@@ -32,26 +31,19 @@ module Hibiscus
     #   Hibiscus.register_provider(:test, **options) do |claims|
     #     User.find_by(email: claims[:email])
     #   end
-    #
-    # rubocop:disable Metrics/MethodLength
     def register_provider(identifier, client_id:, client_secret:, metadata_url:, &user_finder)
       raise ArgumentError, "You must supply a block" unless block_given?
 
       strategy = Class.new(Hibiscus::Strategy) do
-        @provider_config = Hibiscus::Config.new(client_id: client_id, client_secret: client_secret,
-                                                metadata_url: metadata_url, user_finder: user_finder)
+        @provider_config = Hibiscus::ProviderConfig.new(client_id: client_id, client_secret: client_secret,
+                                                        metadata_url: metadata_url, user_finder: user_finder)
 
         class << self
           attr_reader :provider_config
-        end
-
-        def provider_config
-          self.class.provider_config
         end
       end
 
       Warden::Strategies.add(identifier.to_sym, strategy)
     end
-    # rubocop:enable Metrics/MethodLength
   end
 end
