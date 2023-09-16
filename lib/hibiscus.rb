@@ -45,5 +45,29 @@ module Hibiscus
 
       Warden::Strategies.add(identifier.to_sym, strategy)
     end
+
+    def rails_controller_helpers_for(provider:, warden_scope:)
+      Module.new do
+        extend ActiveSupport::Concern
+
+        module_eval <<-METHODS
+          included do
+            helper_method :#{warden_scope}_signed_in?, :current_#{warden_scope}
+          end
+
+          def authenticate_#{warden_scope}!
+            request.env["warden"].authenticate!(:#{provider}, scope: :#{warden_scope})
+          end
+
+          def #{warden_scope}_signed_in?
+            request.env["warden"].authenticated?(:#{warden_scope})
+          end
+
+          def current_#{warden_scope}
+            request.env["warden"].user(:#{warden_scope})
+          end
+        METHODS
+      end
+    end
   end
 end

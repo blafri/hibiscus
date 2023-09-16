@@ -20,17 +20,19 @@ module Hibiscus
         return
       end
 
-      user = catch(:authentication_failure) { validate_user }
-      return fail!(nil) if user.nil?
+      user = try_authentication
+      return fail!(:user_finder_returned_nil) if user.nil?
 
       success!(user)
+    rescue Faraday::Error, MetadataFetchError, JWT::DecodeError, JWKSFetchError
+      fail!(nil)
     end
 
     private
 
     attr_reader :provider_config
 
-    def validate_user
+    def try_authentication
       fetch_token.then { |token| validate_token(token).first.transform_keys(&:to_sym) }
                  .then(&provider_config.user_finder)
     end
@@ -45,8 +47,6 @@ module Hibiscus
       }
 
       http_client.post(provider_config.token_endpoint, token_fetch_params).body.fetch(:id_token)
-    rescue Faraday::Error, MetadataFetchError => e
-      authentication_error(e)
     end
 
     # rubocop:disable Metrics/MethodLength
@@ -60,26 +60,15 @@ module Hibiscus
         iss: provider_config.issuer,
         verify_aud: true,
         aud: provider_config.client_id,
-        jwks: jwks
+        jwks: provider_config.jwks
       }
 
       JWT.decode(token, nil, true, decode_opts)
-    rescue JWT::DecodeError, MetadataFetchError, JWKSFetchError => e
-      authentication_error(e)
     end
     # rubocop:enable Metrics/MethodLength
 
-    def jwks
-      src = provider_config.jwks_uri
-      cache_key = "hibiscus/jwks/#{src}"
-
-      cache.fetch(cache_key, expires_in: 1.day, race_condition_ttl: 10.seconds) { http_client.get(src).body }
-    rescue Faraday::Error => e
-      raise JWKSFetchError, e
-    end
-
     # rubocop:disable Metrics/MethodLength
-    def authentication_error(error)
+    def log_error(error)
       case error
       when Faraday::Error
         logger.error("Hibiscus could not exchange the recieved code for a token -> #{error.message}")
@@ -90,8 +79,6 @@ module Hibiscus
       when Hibiscus::JWKSFetchError
         logger.error("Hibiscus could not fetch the providers JSON Web Key Set -> #{error.message}")
       end
-
-      throw(:authentication_failure)
     end
     # rubocop:enable Metrics/MethodLength
 
@@ -99,8 +86,8 @@ module Hibiscus
       Rails.logger
     end
 
-    def cache
-      Rails.cache
+    def log(message)
+      env[RACK_LOGGER]
     end
 
     def http_client
