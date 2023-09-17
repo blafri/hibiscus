@@ -50,19 +50,31 @@ module Hibiscus
       Module.new do
         extend ActiveSupport::Concern
 
-        module_eval <<-METHODS
+        module_eval <<-METHODS, __FILE__, __LINE__ + 1
+          # included do
+          #   helper_method :user_signed_in?, :current_user
+          # end
           included do
             helper_method :#{warden_scope}_signed_in?, :current_#{warden_scope}
           end
 
+          # def authenticate_user!
+          #   request.env["warden"].authenticate!(:azure, scope: :user)
+          # end
           def authenticate_#{warden_scope}!
             request.env["warden"].authenticate!(:#{provider}, scope: :#{warden_scope})
           end
 
+          # def user_signed_in?
+          #   request.env["warden"].authenticated?(:user)
+          # end
           def #{warden_scope}_signed_in?
             request.env["warden"].authenticated?(:#{warden_scope})
           end
 
+          # def current_user
+          #   request.env["warden"].user(:user)
+          # end
           def current_#{warden_scope}
             request.env["warden"].user(:#{warden_scope})
           end
